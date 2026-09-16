@@ -1,52 +1,99 @@
+
 import streamlit as st
 
-st.set_page_config(page_title="UG Odds Pattern", layout="centered")
-st.title("⚽ ตัวช่วยวิเคราะห์สูตรค่าน้ำ 1.5 & 1.7")
+st.set_page_config(page_title="Odds Advantage Analyzer", page_icon="⚽", layout="centered")
 
-st.info("กรอกค่าน้ำ 3 แถวแรกของคู่นั้นๆ (ดูเฉพาะ 3 แถวแรก)")
+st.title("⚽ เครื่องมือวิเคราะห์ความได้เปรียบของค่าน้ำ")
+st.caption("คำนวณ Implied Probability, ทิศทางน้ำ และแรงกดราคา พร้อมชี้เป้าฝั่งได้เปรียบทุกคู่")
 
-col1, col2 = st.columns(2)
-with col1:
-    st.subheader("ฝั่งซ้าย (เหย้า / สูง)")
-    name_a = st.text_input("ชื่อทีมซ้าย / หรือพิมพ์ 'สูง'", "ทีมซ้าย")
-    r1_a = st.number_input("แถวที่ 1 (น้ำซ้าย)", value=1.84, step=0.01, format="%.2f")
-    r2_a = st.number_input("แถวที่ 2 (น้ำซ้าย)", value=2.15, step=0.01, format="%.2f")
-    r3_a = st.number_input("แถวที่ 3 (น้ำซ้าย)", value=2.52, step=0.01, format="%.2f")
-
-with col2:
-    st.subheader("ฝั่งขวา (เยือน / ต่ำ)")
-    name_b = st.text_input("ชื่อทีมขวา / หรือพิมพ์ 'ต่ำ'", "ทีมขวา")
-    r1_b = st.number_input("แถวที่ 1 (น้ำขวา)", value=2.05, step=0.01, format="%.2f")
-    r2_b = st.number_input("แถวที่ 2 (น้ำขวา)", value=1.76, step=0.01, format="%.2f")
-    r3_b = st.number_input("แถวที่ 3 (น้ำขวา)", value=1.55, step=0.01, format="%.2f")
-
-if st.button("🚀 ตรวจสอบผลตามสูตร", use_container_width=True):
-    rows = [
-        {'left': r1_a, 'right': r1_b},
-        {'left': r2_a, 'right': r2_b},
-        {'left': r3_a, 'right': r3_b}
-    ]
+# ฟังก์ชันคำนวณและวิเคราะห์
+def analyze_odds(l_name, r_name, left_odds, right_odds):
+    results = []
+    total_score_left = 0
+    total_score_right = 0
     
-    pos_15 = None
-    pos_17 = None
-    
-    for row in rows:
-        for side in ['left', 'right']:
-            val = row[side]
-            if 1.50 <= val <= 1.59 and pos_15 is None:
-                pos_15 = side
-            elif 1.70 <= val <= 1.79 and pos_17 is None:
-                pos_17 = side
-
-    if pos_15 and pos_17:
-        if pos_15 != pos_17:
-            win_name = name_a if pos_15 == 'left' else name_b
-            win_odd = r1_a if pos_15 == 'left' else r1_b
-            st.success(f"✅ **เข้าสูตร: ตามฝั่ง 1.5**\n\n👉 **คำแนะนำ:** ให้เล่นฝั่ง **[{win_name}]** ที่ราคาหลักแถว 1 (ค่าน้ำ {win_odd})")
+    for i in range(3):
+        l = left_odds[i]
+        r = right_odds[i]
+        
+        # คำนวณ Implied Probability (ความน่าจะเป็นแฝง)
+        prob_l = (1 / l) * 100 if l > 0 else 0
+        prob_r = (1 / r) * 100 if r > 0 else 0
+        margin = (prob_l + prob_r) - 100 # ค่าน้ำที่โต๊ะหัก
+        
+        # ปรับ Probability ให้เป็นแบบตัดค่าน้ำโต๊ะออก (Fair Probability)
+        fair_prob_l = (prob_l / (prob_l + prob_r)) * 100
+        fair_prob_r = (prob_r / (prob_l + prob_r)) * 100
+        
+        # วิเคราะห์ฝั่งได้เปรียบในแต่ละแถว
+        if fair_prob_l > fair_prob_r:
+            adv = l_name
+            total_score_left += (fair_prob_l - fair_prob_r)
         else:
-            opp_side = 'right' if pos_15 == 'left' else 'left'
-            opp_name = name_a if opp_side == 'left' else name_b
-            opp_odd = r1_a if opp_side == 'left' else r1_b
-            st.warning(f"⚠️ **เข้าสูตรราคาหลอก (1.5 & 1.7 อยู่ฝั่งเดียวกัน)**\n\n👉 **คำแนะนำ:** ให้เล่นสวนทางไปฝั่ง **[{opp_name}]** ที่ราคาหลักแถว 1 (ค่าน้ำ {opp_odd})")
+            adv = r_name
+            total_score_right += (fair_prob_r - fair_prob_l)
+            
+        results.append({
+            "row": i + 1,
+            "l_prob": fair_prob_l,
+            "r_prob": fair_prob_r,
+            "adv": adv,
+            "margin": margin
+        })
+    
+    return results, total_score_left, total_score_right
+
+# UI รับข้อมูล
+st.subheader("📌 ข้อมูลคู่แข่งขัน")
+col_name1, col_name2 = st.columns(2)
+with col_name1:
+    left_team = st.text_input("ชื่อฝั่งซ้าย (เหย้า / สูง)", value="ฝั่งซ้าย")
+with col_name2:
+    right_team = st.text_input("ชื่อฝั่งขวา (เยือน / ต่ำ)", value="ฝั่งขวา")
+
+st.markdown("---")
+st.subheader("🔢 กรอกค่าน้ำ 3 แถว")
+
+col_l, col_r = st.columns(2)
+
+with col_l:
+    st.markdown(f"**{left_team}**")
+    l1 = st.number_input("แถวที่ 1 (ซ้าย)", min_value=1.01, max_value=20.00, value=1.85, step=0.01)
+    l2 = st.number_input("แถวที่ 2 (ซ้าย)", min_value=1.01, max_value=20.00, value=2.10, step=0.01)
+    l3 = st.number_input("แถวที่ 3 (ซ้าย)", min_value=1.01, max_value=20.00, value=2.45, step=0.01)
+
+with col_r:
+    st.markdown(f"**{right_team}**")
+    r1 = st.number_input("แถวที่ 1 (ขวา)", min_value=1.01, max_value=20.00, value=2.05, step=0.01)
+    r2 = st.number_input("แถวที่ 2 (ขวา)", min_value=1.01, max_value=20.00, value=1.80, step=0.01)
+    r3 = st.number_input("แถวที่ 3 (ขวา)", min_value=1.01, max_value=20.00, value=1.55, step=0.01)
+
+# ปุ่มคำนวณ
+if st.button("🚀 วิเคราะห์ความได้เปรียบ", use_container_width=True):
+    left_odds = [l1, l2, l3]
+    right_odds = [r1, r2, r3]
+    
+    rows_data, score_l, score_r = analyze_odds(left_team, right_team, left_odds, right_odds)
+    
+    st.markdown("---")
+    st.subheader("📊 ผลการวิเคราะห์แยกตามแถวราคา")
+    
+    for row in rows_data:
+        st.write(f"**แถวที่ {row['row']}:** {left_team} ({row['l_prob']:.1f}%) vs {right_team} ({row['r_prob']:.1f}%) | โต๊ะหักค่าน้ำ {row['margin']:.2f}%")
+        st.caption(f"👉 แถวนี้ฝั่งได้เปรียบเชิงราคา: **{row['adv']}**")
+
+    st.markdown("---")
+    
+    # บทสรุปฟันธง
+    if score_l > score_r:
+        diff = score_l - score_r
+        confidence = min(90.0, 50.0 + (diff / 3))
+        st.success(f"🎯 **ฟันธงภาพรวม:** แนะนำวางฝั่ง **[{left_team}]**")
+        st.info(f"ดัชนีความได้เปรียบเชิงราคาอยู่ที่ **{confidence:.1f}%**")
+    elif score_r > score_l:
+        diff = score_r - score_l
+        confidence = min(90.0, 50.0 + (diff / 3))
+        st.success(f"🎯 **ฟันธงภาพรวม:** แนะนำวางฝั่ง **[{right_team}]**")
+        st.info(f"ดัชนีความได้เปรียบเชิงราคาอยู่ที่ **{confidence:.1f}%**")
     else:
-        st.error("❌ คู่นี้ไม่เข้าสูตร 1.5 & 1.7 (ข้ามไปดูคู่อื่น)")
+        st.warning("⚖️ ทั้งสองฝั่งราคาเปิดมาสมดุลกันมาก แนะนำให้มองหาตัวเลือกอื่นหรือเล่นเรตเสมอ")
