@@ -6,7 +6,6 @@ import re
 
 st.set_page_config(page_title="Pro Odds Analyzer V11", page_icon="⚽", layout="centered")
 
-# แถบตั้งค่าด้านข้าง
 with st.sidebar:
     st.subheader("🔑 ตั้งค่าระบบ AI")
     api_key = st.text_input("ใส่ Gemini API Key:", type="password")
@@ -15,10 +14,27 @@ with st.sidebar:
 st.title("⚽ เครื่องมือวิเคราะห์บอลคู่ (Pro V11.0)")
 st.caption("ระบบคำนวณ Calibrated Edge Scale พร้อมสแกนราคาอัตโนมัติ")
 
-# ฟังก์ชันอ่านภาพด้วย gemini-2.5-flash ตามระบบล่าสุด
 def parse_image_with_gemini(image, key):
     genai.configure(api_key=key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    
+    # ตรวจสอบหาโมเดลที่บัญชีนี้ใช้งานได้จริงแบบอัตโนมัติ
+    valid_model_name = None
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            if 'flash' in m.name:
+                valid_model_name = m.name
+                break
+    
+    if not valid_model_name:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                valid_model_name = m.name
+                break
+
+    if not valid_model_name:
+        raise Exception("ไม่พบรุ่นโมเดลที่รองรับใน API Key นี้ กรุณาตรวจสอบสิทธิ์ใน Google AI Studio")
+
+    model = genai.GenerativeModel(valid_model_name)
     
     prompt = """
     วิเคราะห์ภาพตารางราคานี้ และดึงข้อมูลของคู่แรกออกมาในรูปแบบ JSON เท่านั้น โดยไม่มี markdown formatting อื่นๆ:
@@ -41,7 +57,6 @@ def parse_image_with_gemini(image, key):
         return json.loads(json_match.group())
     return json.loads(text)
 
-# ฟังก์ชันคำนวณความได้เปรียบ
 def calculate_edge(o1, o2):
     p1 = (1 / o1) * 100 if o1 > 0 else 0
     p2 = (1 / o2) * 100 if o2 > 0 else 0
