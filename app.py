@@ -15,33 +15,13 @@ with st.sidebar:
 st.title("⚽ เครื่องมือวิเคราะห์บอลคู่ (Pro V11.0)")
 st.caption("ระบบคำนวณ Calibrated Edge Scale พร้อมสแกนราคาอัตโนมัติ")
 
-# ฟังก์ชันเลือกโมเดลที่พร้อมใช้งานและอ่านภาพ
+# ฟังก์ชันอ่านภาพด้วย gemini-2.0-flash ตามที่ระบบแนะนำ
 def parse_image_with_gemini(image, key):
     genai.configure(api_key=key)
-    
-    # ดึงรายชื่อโมเดลที่ Key นี้รองรับการสร้างเนื้อหา
-    available_models = [
-        m.name for m in genai.list_models() 
-        if 'generateContent' in m.supported_generation_methods
-    ]
-    
-    # เลือกรุ่น Flash หรือ Vision ที่มีอยู่ในบัญชี
-    chosen_model = None
-    for name in available_models:
-        if "flash" in name:
-            chosen_model = name
-            break
-            
-    if not chosen_model and available_models:
-        chosen_model = available_models[0]
-        
-    if not chosen_model:
-        chosen_model = "gemini-1.5-flash"
-
-    model = genai.GenerativeModel(chosen_model)
+    model = genai.GenerativeModel('gemini-2.0-flash')
     
     prompt = """
-    วิเคราะห์ภาพตารางราคานี้ และดึงข้อมูลของคู่แรกออกมาในรูปแบบ JSON เท่านั้น โดยไม่มี markdown formatting หรือตัวหนังสืออื่น:
+    วิเคราะห์ภาพตารางราคานี้ และดึงข้อมูลของคู่แรกออกมาในรูปแบบ JSON เท่านั้น โดยไม่มี markdown formatting อื่นๆ:
     {
       "home_team": "ชื่อทีมเจ้าบ้าน",
       "away_team": "ชื่อทีมเยือน",
@@ -61,7 +41,7 @@ def parse_image_with_gemini(image, key):
         return json.loads(json_match.group())
     return json.loads(text)
 
-# คำนวณความได้เปรียบ
+# ฟังก์ชันคำนวณความได้เปรียบ
 def calculate_edge(o1, o2):
     p1 = (1 / o1) * 100 if o1 > 0 else 0
     p2 = (1 / o2) * 100 if o2 > 0 else 0
