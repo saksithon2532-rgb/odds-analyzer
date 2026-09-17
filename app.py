@@ -1,134 +1,141 @@
 import streamlit as st
+import google.generativeai as genai
 from PIL import Image
 import json
-import google.generativeai as genai
+import re
 
-st.set_page_config(page_title="Pro Odds Analyzer (AI Scanner)", layout="wide")
+st.set_page_config(page_title="Pro Odds Analyzer V11", page_icon="⚽", layout="centered")
 
-st.title("⚽ เครื่องมือวิเคราะห์บอลคู่ (Pro V11.0 + AI Scanner)")
-st.caption("ระบบคำนวณ Calibrated Edge Scale พร้อมสแกนราคาอัตโนมัติด้วย AI")
-
-# --- แถบด้านข้างสำหรับตั้งค่า API Key ---
+# แถบตั้งค่าด้านข้าง
 with st.sidebar:
-    st.header("🔑 ตั้งค่าระบบ AI")
-    api_key = st.text_input("ใส่ Gemini API Key:", type="password", help="วางรหัส API Key ที่ได้จาก Google AI Studio")
-    st.info("คีย์จะถูกใช้สำหรับอ่านรูปภาพเท่านั้น ไม่มีการบันทึกข้อมูล")
+    st.subheader("🔑 ตั้งค่าระบบ AI")
+    api_key = st.text_input("ใส่ Gemini API Key:", type="password")
+    st.caption("คีย์จะถูกใช้สำหรับอ่านภาพเท่านั้น ไม่มีการบันทึกข้อมูล")
 
-# --- ฟังก์ชัน AI อ่านภาพ ---
-def analyze_image_with_gemini(image, key):
+st.title("⚽ เครื่องมือวิเคราะห์บอลคู่ (Pro V11.0)")
+st.caption("ระบบคำนวณ Calibrated Edge Scale พร้อมสแกนราคาอัตโนมัติ")
+
+# ฟังก์ชันอ่านภาพด้วย AI
+def parse_image_with_gemini(image, key):
     genai.configure(api_key=key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # ใช้โมเดลมาตรฐานที่รองรับ API ทุกเวอร์ชัน
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    
     prompt = """
-    คุณเป็นผู้เชี่ยวชาญการอ่านตารางราคาบอลจากรูปภาพ 
-    ให้ดึงข้อมูลค่าน้ำและอัตราต่อรองออกมาในรูปแบบ JSON เท่านั้น โดยมีโครงสร้างดังนี้:
+    วิเคราะห์ภาพตารางราคานี้ และดึงข้อมูลของคู่แรกออกมาในรูปแบบ JSON เท่านั้น โดยไม่มี markdown formatting อื่นๆ:
     {
-      "team_home": "ชื่อทีมเหย้า",
-      "team_away": "ชื่อทีมเยือน",
-      "hdp_side": "เจ้าบ้านต่อ" หรือ "ทีมเยือนต่อ" หรือ "เสมอ (0)",
-      "hdp_val_1": 0.5,
-      "hdp_home_1": 1.85,
-      "hdp_away_1": 2.05,
-      "ou_val_1": 2.5,
-      "ou_over_1": 1.95,
-      "ou_under_1": 1.85
+      "home_team": "ชื่อทีมเจ้าบ้าน/ทีมบน",
+      "away_team": "ชื่อทีมเยือน/ทีมล่าง",
+      "hdp": "แต้มต่อ เช่น 0.5 หรือ 0.5-1",
+      "fav_team": "เจ้าบ้านต่อ หรือ ทีมเยือนต่อ",
+      "hdp_home_odds": 1.85,
+      "hdp_away_odds": 2.05,
+      "ou": "เรตสูงต่ำ เช่น 2.5",
+      "ou_over_odds": 1.95,
+      "ou_under_odds": 1.85
     }
-    ตอบกลับเฉพาะ JSON ล้วนๆ ห้ามมีคำอธิบายเพิ่มเติม ห้ามมี Markdown block อื่น
+    หากไม่พบค่าใด ให้ใส่ค่าปริยายที่เหมาะสม
     """
     response = model.generate_content([prompt, image])
-    text = response.text.replace("```json", "").replace("```", "").strip()
+    text = response.text
+    # กรองเอาเฉพาะเนื้อหา JSON
+    json_match = re.search(r'\{.*\}', text, re.DOTALL)
+    if json_match:
+        return json.loads(json_match.group())
     return json.loads(text)
 
-# --- ส่วนสแกนภาพ ---
+# ฟังก์ชันคำนวณความได้เปรียบ
+def calculate_edge(o1, o2):
+    p1 = (1 / o1) * 100 if o1 > 0 else 0
+    p2 = (1 / o2) * 100 if o2 > 0 else 0
+    fair_p1 = (p1 / (p1 + p2)) * 100
+    fair_p2 = (p2 / (p1 + p2)) * 100
+    margin = (p1 + p2) - 100
+    return fair_p1, fair_p2, margin
+
+# ตัวแปรเริ่มต้นใน session state
+if "data" not in st.session_state:
+    st.session_state.data = {
+        "home": "เจ้าบ้าน", "away": "ทีมเยือน",
+        "fav": "เจ้าบ้านต่อ", "hdp": "0.5", "l_hdp": 1.85, "r_hdp": 2.05,
+        "ou": "2.5", "o_odds": 1.95, "u_odds": 1.85
+    }
+
 st.subheader("📷 1. สแกนราคาจากรูปภาพ (ทางเลือก)")
 uploaded_file = st.file_uploader("อัปโหลดภาพแคปหน้าจอราคาบอล", type=["jpg", "jpeg", "png"])
 
-scanned_data = {}
-if uploaded_file and api_key:
+if uploaded_file is not None:
     img = Image.open(uploaded_file)
-    st.image(img, caption="ภาพที่อัปโหลด", width=300)
-    if st.button("🚀 กดให้ AI อ่านข้อมูลจากภาพ"):
-        with st.spinner("AI กำลังวิเคราะห์ข้อมูลราคา..."):
+    st.image(img, caption="ภาพที่อัปโหลด", use_container_width=True)
+    
+    if st.button("🚀 กดให้ AI อ่านข้อมูลจากภาพ", use_container_width=True):
+        if not api_key:
+            st.error("กรุณากรอก Gemini API Key ที่แถบด้านซ้ายมือก่อนกดอ่านภาพ")
+        else:
             try:
-                scanned_data = analyze_image_with_gemini(img, api_key)
-                st.success("อ่านข้อมูลสำเร็จ! ข้อมูลถูกนำไปกรอกในฟอร์มด้านล่างแล้ว")
+                with st.spinner("AI กำลังแกะข้อมูลราคา..."):
+                    parsed = parse_image_with_gemini(img, api_key)
+                    st.session_state.data["home"] = parsed.get("home_team", "เจ้าบ้าน")
+                    st.session_state.data["away"] = parsed.get("away_team", "ทีมเยือน")
+                    st.session_state.data["hdp"] = str(parsed.get("hdp", "0.5"))
+                    st.session_state.data["fav"] = parsed.get("fav_team", "เจ้าบ้านต่อ")
+                    st.session_state.data["l_hdp"] = float(parsed.get("hdp_home_odds", 1.85))
+                    st.session_state.data["r_hdp"] = float(parsed.get("hdp_away_odds", 2.05))
+                    st.session_state.data["ou"] = str(parsed.get("ou", "2.5"))
+                    st.session_state.data["o_odds"] = float(parsed.get("ou_over_odds", 1.95))
+                    st.session_state.data["u_odds"] = float(parsed.get("ou_under_odds", 1.85))
+                st.success("ดึงข้อมูลสำเร็จเรียบร้อย!")
             except Exception as e:
-                st.error(f"เกิดข้อผิดพลาดในการอ่านภาพ: {str(e)}")
-elif uploaded_file and not api_key:
-    st.warning("⚠️ กรุณากรอก Gemini API Key ที่แถบด้านซ้ายมือก่อนกดอ่านภาพครับ")
+                st.error(f"เกิดข้อผิดพลาด: {str(e)}")
 
 st.markdown("---")
 
-# --- ข้อมูลคู่แข่งขัน ---
+# ฟอร์มข้อมูลและการแก้ไข
 st.subheader("📌 2. ข้อมูลคู่แข่งขัน")
-c1, c2 = st.columns(2)
-with c1:
-    team_home = st.text_input("ทีมเหย้า (ฝั่งซ้าย)", value=scanned_data.get("team_home", "เจ้าบ้าน"))
-with c2:
-    team_away = st.text_input("ทีมเยือน (ฝั่งขวา)", value=scanned_data.get("team_away", "ทีมเยือน"))
+c_t1, c_t2 = st.columns(2)
+with c_t1:
+    home_name = st.text_input("ทีมเหย้า (ฝั่งซ้าย)", value=st.session_state.data["home"])
+with c_t2:
+    away_name = st.text_input("ทีมเยือน (ฝั่งขวา)", value=st.session_state.data["away"])
 
-# --- ราคาต่อรอง แฮนดิแคป ---
 st.subheader("🎯 3. ราคาต่อรอง แฮนดิแคป (HDP)")
-side_opts = ["เจ้าบ้านต่อ", "ทีมเยือนต่อ", "เสมอ (0)"]
-default_side_idx = 0
-if scanned_data.get("hdp_side") in side_opts:
-    default_side_idx = side_opts.index(scanned_data.get("hdp_side"))
-
-fav_side = st.selectbox("ฝั่งต่อ", side_opts, index=default_side_idx)
-
+fav = st.selectbox("ฝั่งต่อ", ["เจ้าบ้านต่อ", "ทีมเยือนต่อ", "เสมอ (0)"], 
+                   index=0 if "เจ้าบ้าน" in st.session_state.data["fav"] else 1)
 col_h1, col_h2, col_h3 = st.columns(3)
 with col_h1:
-    hdp_val = st.text_input("แต้มต่อ (เช่น 0.5, 0.5-1)", value=str(scanned_data.get("hdp_val_1", "0.5")))
+    hdp_rate = st.text_input("แต้มต่อ (เช่น 0.5, 0.5-1)", value=st.session_state.data["hdp"])
 with col_h2:
-    water_home = st.number_input("น้ำ เจ้าบ้าน", value=float(scanned_data.get("hdp_home_1", 1.85)), step=0.01)
+    hdp_l = st.number_input(f"น้ำ {home_name}", min_value=1.01, max_value=20.0, value=st.session_state.data["l_hdp"], step=0.01)
 with col_h3:
-    water_away = st.number_input("น้ำ ทีมเยือน", value=float(scanned_data.get("hdp_away_1", 2.05)), step=0.01)
+    hdp_r = st.number_input(f"น้ำ {away_name}", min_value=1.01, max_value=20.0, value=st.session_state.data["r_hdp"], step=0.01)
 
-# --- ราคาสูง-ต่ำ ---
 st.subheader("⚽ 4. ราคาสูง-ต่ำ (Over/Under)")
-col_ou1, col_ou2, col_ou3 = st.columns(3)
-with col_ou1:
-    ou_val = st.text_input("เรตสูงต่ำ (เช่น 2.5, 2.5-3)", value=str(scanned_data.get("ou_val_1", "2.5")))
-with col_ou2:
-    water_over = st.number_input("น้ำ สูง", value=float(scanned_data.get("ou_over_1", 1.95)), step=0.01)
-with col_ou3:
-    water_under = st.number_input("น้ำ ต่ำ", value=float(scanned_data.get("ou_under_1", 1.85)), step=0.01)
+col_u1, col_u2, col_u3 = st.columns(3)
+with col_u1:
+    ou_rate = st.text_input("เรตสูงต่ำ (เช่น 2.5, 2.5-3)", value=st.session_state.data["ou"])
+with col_u2:
+    ou_o = st.number_input("น้ำ สูง", min_value=1.01, max_value=20.0, value=st.session_state.data["o_odds"], step=0.01)
+with col_u3:
+    ou_u = st.number_input("น้ำ ต่ำ", min_value=1.01, max_value=20.0, value=st.session_state.data["u_odds"], step=0.01)
 
 st.markdown("---")
 
-# --- ฟังก์ชันคำนวณความน่าจะเป็น ---
-def calc_probs(w1, w2):
-    inv1 = 1 / w1 if w1 > 0 else 0
-    inv2 = 1 / w2 if w2 > 0 else 0
-    margin = (inv1 + inv2) - 1
-    fair1 = inv1 / (1 + margin) if (1 + margin) > 0 else 0
-    fair2 = inv2 / (1 + margin) if (1 + margin) > 0 else 0
-    return fair1 * 100, fair2 * 100
-
-if st.button("🚀 คำนวณและชี้เป้าทีเด็ด", use_container_width=True):
-    p_home, p_away = calc_probs(water_home, water_away)
-    p_over, p_under = calc_probs(water_over, water_under)
+if st.button("📊 วิเคราะห์ความได้เปรียบเชิงราคา", use_container_width=True):
+    p_home, p_away, m_hdp = calculate_edge(hdp_l, hdp_r)
+    p_over, p_under, m_ou = calculate_edge(ou_o, ou_u)
     
-    st.subheader("📊 ผลการวิเคราะห์สัญญาณราคา")
+    st.markdown("### 📈 สรุปผลการวิเคราะห์")
     
-    c_res1, c_res2 = st.columns(2)
-    with c_res1:
-        st.write(f"**สัญญาณแฮนดิแคป:** เรต {hdp_val}")
-        st.write(f"- โอกาส {team_home}: **{p_home:.1f}%**")
-        st.write(f"- โอกาส {team_away}: **{p_away:.1f}%**")
-        if p_home > p_away + 5:
-            st.success(f"ชี้เป้า: **{team_home}** มีกระแสน้ำหนุนชัดเจน")
-        elif p_away > p_home + 5:
-            st.success(f"ชี้เป้า: **{team_away}** มีกระแสน้ำหนุนชัดเจน")
-        else:
-            st.info("สัญญาณน้ำสูสี ทั้งสองฝั่งเปิดโอกาสใกล้เคียงกัน")
-            
-    with c_res2:
-        st.write(f"**สัญญาณสูง-ต่ำ:** เรต {ou_val}")
-        st.write(f"- โอกาส สกอร์สูง: **{p_over:.1f}%**")
-        st.write(f"- โอกาส สกอร์ต่ำ: **{p_under:.1f}%**")
-        if p_over > p_under + 5:
-            st.success("ชี้เป้า: **สกอร์สูง** กระแสน้ำเปิดกว้าง")
-        elif p_under > p_over + 5:
-            st.success("ชี้เป้า: **สกอร์ต่ำ** ปลอดภัยกว่า")
-        else:
-            st.info("สัญญาณประตูรวมยังก้ำกึ่ง")
+    # HDP
+    st.write(f"**แฮนดิแคป [{hdp_rate}]:** {home_name} ({p_home:.1f}%) vs {away_name} ({p_away:.1f}%) | โต๊ะหักน้ำ {m_hdp:.2f}%")
+    if p_home > p_away:
+        st.success(f"👉 ค่าน้ำเอื้อฝั่ง: **[{home_name}]** (ความได้เปรียบ {p_home - p_away:.1f}%)")
+    else:
+        st.success(f"👉 ค่าน้ำเอื้อฝั่ง: **[{away_name}]** (ความได้เปรียบ {p_away - p_home:.1f}%)")
+        
+    # OU
+    st.write(f"**สูง-ต่ำ [{ou_rate}]:** สูง ({p_over:.1f}%) vs ต่ำ ({p_under:.1f}%) | โต๊ะหักน้ำ {m_ou:.2f}%")
+    if p_over > p_under:
+        st.success(f"👉 ค่าน้ำเอื้อฝั่ง: **[สกอร์สูง {ou_rate}]** (ความได้เปรียบ {p_over - p_under:.1f}%)")
+    else:
+        st.success(f"👉 ค่าน้ำเอื้อฝั่ง: **[สกอร์ต่ำ {ou_rate}]** (ความได้เปรียบ {p_under - p_over:.1f}%)")
