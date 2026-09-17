@@ -1,9 +1,9 @@
 import streamlit as st
 
-st.set_page_config(page_title="Pro Odds Analyzer V10 (Calibrated)", page_icon="⚽", layout="centered")
+st.set_page_config(page_title="Pro Odds Analyzer V10.1", page_icon="⚽", layout="centered")
 
-st.title("⚽ เครื่องมือวิเคราะห์บอลคู่ (Pro V10 - ปรับจูนความไวค่าน้ำ)")
-st.caption("สูตรคำนวณแบบ Calibrated Edge Scale: ตรวจจับค่าน้ำไหลและปลดล็อกระดับ 70%-80%+ ตามความได้เปรียบจริง")
+st.title("⚽ เครื่องมือวิเคราะห์บอลคู่ (Pro V10.1)")
+st.caption("ระบบคำนวณ Calibrated Edge Scale: เปรียบเทียบความได้เปรียบอัตโนมัติ ชี้เป้าตัวที่เปอร์เซ็นต์สูงสุดเสมอ")
 
 def calc_probs(odds_l, odds_r):
     if odds_l <= 0 or odds_r <= 0:
@@ -92,7 +92,7 @@ for idx in range(num_ou_rows):
 
 st.markdown("---")
 
-if st.button("🚀 ประมวลผลและชี้เป้าทีเด็ด (Pro V10)", use_container_width=True):
+if st.button("🚀 ประมวลผลและชี้เป้าทีเด็ด (Pro V10.1)", use_container_width=True):
     # คำนวณแฮนดิแคป
     w_h = get_weights(num_h_rows)
     tot_hl, tot_hr = 0.0, 0.0
@@ -102,7 +102,6 @@ if st.button("🚀 ประมวลผลและชี้เป้าที�
         tot_hr += pr * w_h[i]
         
     diff_h = abs(tot_hl - tot_hr)
-    # Calibrated Scale: ปรับตัวคูณเป็น 2.45 เพื่อสะท้อนขอบเขต 50% - 85% ได้แม่นยำจริง
     conf_h = min(88.0, 50.0 + (diff_h * 2.45))
     
     main_side = h_sides[0]
@@ -126,24 +125,24 @@ if st.button("🚀 ประมวลผลและชี้เป้าที�
     conf_ou = min(88.0, 50.0 + (diff_ou * 2.45))
     lbl_ou_main = f"สูง {ou_rates[0]}" if tot_oo > tot_ou else f"ต่ำ {ou_rates[0]}"
     
-    # เลือกระหว่างสองตลาด
-    st.subheader("🏆 ผลสรุปฟันธงระดับมืออาชีพ (Pro V10)")
+    # เลือกระหว่างสองตลาด: เทียบตรงๆ ตัวไหนเปอร์เซ็นต์สูงกว่าหยิบตัวนั้นเป็นคำแนะนำหลักทันที
+    st.subheader("🏆 ผลสรุปฟันธงระดับมืออาชีพ (Pro V10.1)")
     
-    if conf_ou > conf_h and conf_ou >= 68.0:
+    if conf_ou > conf_h:
         target_market = "ราคาสูง-ต่ำ (Total Goals)"
         final_pick = f"วาง {lbl_ou_main}"
         final_conf = conf_ou
-        reason = f"ตลาดสูง-ต่ำมีความชัดเจนกว่า (ค่าน้ำฝั่ง {'สูง' if tot_oo > tot_ou else 'ต่ำ'} จ่ายต่ำและมีความได้เปรียบสูง)"
+        reason = f"ตลาดสกอร์รวมมีความชัดเจนและได้เปรียบกว่าแฮนดิแคป (ค่าน้ำฝั่ง {'สูง' if tot_oo > tot_ou else 'ต่ำ'} ได้เปรียบชัดเจน)"
     else:
         target_market = "ราคาแฮนดิแคป (Handicap)"
         final_pick = f"วาง {lbl_h_main}"
         final_conf = conf_h
-        reason = "ตลาดแฮนดิแคปมีความได้เปรียบชัดเจนกว่าราคาผลรวมสกอร์"
+        reason = "ตลาดแฮนดิแคปมีความได้เปรียบและทิศทางชัดเจนกว่าราคาผลรวมสกอร์"
 
     if final_conf >= 75.0:
         st.success(f"🎯 **คำแนะนำ:** **{final_pick}**")
         badge = "🟢 เล่นได้ทั้งบอลเต็งและสเต็ป (เกรด A)"
-    elif final_conf >= 68.0:
+    elif final_conf >= 65.0:
         st.info(f"🎯 **คำแนะนำ:** **{final_pick}**")
         badge = "🔵 เหมาะสำหรับบอลเต็งเดี่ยวเท่านั้น (เกรด B)"
     else:
