@@ -76,6 +76,17 @@ st.markdown("""
         box-shadow: 0 4px 16px rgba(46, 160, 67, 0.4) !important;
         transform: translateY(-1px);
     }
+    /* กล่องแถบสี Grade B ชัดเจน */
+    .grade-box-b {
+        background-color: #21262d;
+        border-left: 6px solid #8b949e;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin: 10px 0;
+        color: #f0f6fc;
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -126,6 +137,19 @@ def calc_row_probs(odd1, odd2, t1_name, t2_name):
     diff = abs(p1 - p2)
     return p1, p2, adv, diff
 
+# ฟังก์ชันเรนเดอร์กล่องแถบสีให้ชัดเจนทุกเกรด
+def render_grade_box(grade_color, grade_text):
+    if grade_color == "green":
+        st.success(f"**สถานะความมั่นใจ:** 🟢 {grade_text}")
+    elif grade_color == "blue":
+        st.info(f"**สถานะความมั่นใจ:** 🔵 {grade_text}")
+    elif grade_color == "orange":
+        st.warning(f"**สถานะความมั่นใจ:** 🟠 {grade_text}")
+    elif grade_color == "red":
+        st.error(f"**สถานะความมั่นใจ:** 🔴 {grade_text}")
+    else:
+        st.markdown(f'<div class="grade-box-b">⚪ <b>สถานะความมั่นใจ:</b> {grade_text}</div>', unsafe_allow_html=True)
+
 # ส่วนที่ 1: ข้อมูลทีม
 st.subheader("📌 1. ระบุชื่อทีม")
 c_t1, c_t2 = st.columns(2)
@@ -153,10 +177,10 @@ mode = st.radio(
 
 st.divider()
 
-# ส่วนที่ 3: แบบฟอร์มกรอกราคาตามโหมด
+# ส่วนที่ 3: แบบฟอร์มกรอกราคา
 st.subheader("🔢 3. ค่าน้ำและเรตราคาต่อรอง")
 
-# แถวที่ 1 (แสดงทุกโหมด)
+# แถวที่ 1
 st.markdown("🔹 **แถวที่ 1 (ราคาเปิดหลัก)**")
 col_f1, col_r1 = st.columns(2)
 with col_f1:
@@ -170,7 +194,7 @@ with col_o1_1:
 with col_o1_2:
     o1_2 = st.number_input(f"น้ำ {team2_name} (1)", min_value=1.0, max_value=5.0, value=1.99, step=0.01, key="o1_2")
 
-# แถวที่ 2 (แสดงในโหมด 2 ราคา และ 3 ราคา)
+# แถวที่ 2
 if mode in ["2 ราคา (ราคาหลัก + ราคาสำรอง)", "3 ราคา (เจาะลึก 3 แถวราคา)"]:
     weight_text_2 = "น้ำหนัก 35%" if mode == "2 ราคา (ราคาหลัก + ราคาสำรอง)" else "น้ำหนัก 25%"
     st.markdown(f"🔹 **แถวที่ 2 ({weight_text_2})**")
@@ -186,7 +210,7 @@ if mode in ["2 ราคา (ราคาหลัก + ราคาสำรอ
     with col_o2_2:
         o2_2 = st.number_input(f"น้ำ {team2_name} (2)", min_value=1.0, max_value=5.0, value=1.74, step=0.01, key="o2_2")
 
-# แถวที่ 3 (แสดงเฉพาะโหมด 3 ราคา)
+# แถวที่ 3
 if mode == "3 ราคา (เจาะลึก 3 แถวราคา)":
     st.markdown("🔹 **แถวที่ 3 (น้ำหนัก 25%)**")
     col_f3, col_r3 = st.columns(2)
@@ -234,15 +258,7 @@ if st.button("🚀 ประมวลผลและชี้เป้าที�
         st.subheader("🎯 ชี้เป้าฝั่งที่ได้เปรียบ (โหมด 1 ราคา)")
         with st.container(border=True):
             st.markdown(f"### 👉 แนะนำ: **{advice}**")
-            if grade_color == "green":
-                st.success(f"**สถานะความมั่นใจ:** 🟢 {grade}")
-            elif grade_color == "blue":
-                st.info(f"**สถานะความมั่นใจ:** 🔵 {grade}")
-            elif grade_color == "red":
-                st.error(f"**สถานะความมั่นใจ:** 🔴 {grade}")
-            else:
-                st.write(f"**สถานะความมั่นใจ:** ⚪ {grade}")
-
+            render_grade_box(grade_color, grade)
             st.write(f"📌 **เรตที่แนะนำ:** ยึดราคา {side1} - {rate1}")
             st.caption(f"💡 **วิเคราะห์เชิงลึก:** {analysis_note}")
 
@@ -251,7 +267,6 @@ if st.button("🚀 ประมวลผลและชี้เป้าที�
         st.caption(f"★ ทิศทางราคาเทไป: {adv} | ส่วนต่างความได้เปรียบ: {diff:.2f}%")
 
     else:
-        # กำหนดพารามิเตอร์สำหรับ 2 ราคา หรือ 3 ราคา
         if mode == "2 ราคา (ราคาหลัก + ราคาสำรอง)":
             num_rows = 2
             weights = [0.65, 0.35]
@@ -282,7 +297,6 @@ if st.button("🚀 ประมวลผลและชี้เป้าที�
             p1_val = row_details[i]["p1"]
             p2_val = row_details[i]["p2"]
             
-            # ข้ามแถวที่ต่อลึกขึ้นแล้วน้ำล้นตามธรรมชาติ
             if hdp_numeric[i] > hdp_numeric[0] and "ต่อ" in sides[i]:
                 if sides[i] == f"{team1_name} ต่อ" and p1_val < 50.0:
                     p1_val = 50.0
@@ -339,17 +353,7 @@ if st.button("🚀 ประมวลผลและชี้เป้าที�
         st.subheader(f"🎯 ชี้เป้าฝั่งที่ได้เปรียบ ({mode})")
         with st.container(border=True):
             st.markdown(f"### 👉 แนะนำ: **{advice}**")
-            if grade_color == "green":
-                st.success(f"**สถานะความมั่นใจ:** 🟢 {grade}")
-            elif grade_color == "blue":
-                st.info(f"**สถานะความมั่นใจ:** 🔵 {grade}")
-            elif grade_color == "orange":
-                st.warning(f"**สถานะความมั่นใจ:** 🟠 {grade}")
-            elif grade_color == "red":
-                st.error(f"**สถานะความมั่นใจ:** 🔴 {grade}")
-            else:
-                st.write(f"**สถานะความมั่นใจ:** ⚪ {grade}")
-
+            render_grade_box(grade_color, grade)
             st.write(f"📌 **เรตที่แนะนำ:** ยึดราคาเปิดหลักแถว 1 ({side1} - {rate1})")
             st.caption(f"💡 **วิเคราะห์เชิงลึก:** {analysis_note}")
 
@@ -357,4 +361,3 @@ if st.button("🚀 ประมวลผลและชี้เป้าที�
         for i in range(num_rows):
             st.write(f"**แถวที่ {i+1} [{sides[i]} ({rates[i]})]:** {team1_name} ({row_details[i]['p1']:.1f}%) vs {team2_name} ({row_details[i]['p2']:.1f}%)")
             st.caption(f"★ ทิศทางราคาเทไป: {row_details[i]['adv']} | ส่วนต่างได้เปรียบ: {row_details[i]['diff']:.2f}%")
-
