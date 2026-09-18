@@ -1,12 +1,12 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="Odds Analyzer V10.2 Classic Pro",
+    page_title="Odds Analyzer V10.6 Pro Match-Context",
     page_icon="⚽",
     layout="centered"
 )
 
-# Dark Mode ธีมมืด สบายตา ปุ่มใหญ่จิ้มง่ายในมือถือ
+# Dark Mode ธีมมืด สบายตา ปุ่มใหญ่จิ้มง่ายบนมือถือ
 st.markdown("""
     <style>
     .stApp {
@@ -40,10 +40,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("⚽ ตัวกรองค่าน้ำแฮนดิแคป (V10.2 Classic Pro)")
-st.caption("ระบบคัดเกรด A/B/C ค่าน้ำ 3 แถวราคาแบบดั้งเดิม ไม่ต้องใช้ API ใช้งานง่ายผ่านมือถือ")
+st.title("⚽ ตัวกรองค่าน้ำ + บริบทการแข่งขัน (V10.6)")
+st.caption("ระบบผสานค่าน้ำ 3 แถว พร้อมคำนวณประเภทรายการแข่งและระดับชั้นบอล คัดเกรด A+ แม่นยำ")
 
-# เรตราคาแฮนดิแคป 0 ถึง 7.0 ลูก
+# ตัวเลือกเรตราคา 0 ถึง 7.0 ลูก
 HDP_OPTIONS = [
     "เสมอ (0)", "0-0.5 (เสมอควบครึ่ง)", "0.5 (ครึ่งลูก)", "0.5-1 (ครึ่งควบลูก)",
     "1.0 (หนึ่งลูก)", "1-1.5 (ลูกควบลูกครึ่ง)", "1.5 (ลูกครึ่ง)", "1.5-2 (ลูกครึ่งควบสอง)",
@@ -55,7 +55,7 @@ HDP_OPTIONS = [
     "7.0 (เจ็ดลูก)"
 ]
 
-# --- ส่วนที่ 1: คู่แข่งขัน & ฝั่งต่อ ---
+# --- 1. ข้อมูลคู่แข่งขัน & ฝั่งต่อ ---
 st.subheader("📌 1. คู่แข่งขัน & ฝั่งต่อ")
 c1, c2 = st.columns(2)
 with c1:
@@ -67,10 +67,35 @@ fav_side = st.radio("ทีมที่เป็นฝั่งต่อ:", [f"{
 
 st.markdown("---")
 
-# --- ส่วนที่ 2: ค่าน้ำและเรตราคา 3 แถว ---
-st.subheader("🔢 2. ค่าน้ำและเรตราคา 3 แถว")
+# --- 2. บริบทการแข่งขัน & ระดับชั้น (กดเลือกง่ายๆ 2 ช่อง) ---
+st.subheader("🏆 2. รายการแข่งขัน & ระดับชั้นของคู่แข่งขัน")
+col_m1, col_m2 = st.columns(2)
+with col_m1:
+    match_type = st.selectbox(
+        "ประเภทรายการแข่งขัน:",
+        [
+            "บอลลีกปกติ (เน้นแต้มเต็มที่)",
+            "บอลถ้วยยุโรป (UCL / UEL / UECL)",
+            "บอลถ้วยในประเทศ (อาจมีโรเตชั่น/พักตัวหลัก)",
+            "กระชับมิตร / บอลอุ่นเครื่อง"
+        ]
+    )
+with col_m2:
+    tier_level = st.selectbox(
+        "ระดับความต่างชั้นของสองทีม:",
+        [
+            "ระดับใกล้เคียงกัน / คู่คี่สูสี",
+            "ทีมต่อเกรดดีกว่าปานกลาง (กลางตาราง vs ท้ายตาราง)",
+            "ต่างชั้นกันชัดเจน (หัวตาราง vs ท้ายตาราง / ต่างลีก)"
+        ]
+    )
 
-# แถวที่ 1
+st.markdown("---")
+
+# --- 3. ค่าน้ำ 3 แถวราคา ---
+st.subheader("🔢 3. ค่าน้ำและเรตราคา 3 แถว")
+
+# แถวที่ 1 (หลัก 50%)
 st.markdown("🔹 **แถวที่ 1 (ราคาเปิดหลัก - น้ำหนัก 50%)**")
 h_rate1 = st.selectbox("เรตแต้มต่อ แถว 1", HDP_OPTIONS, index=3, key="h_rate1")
 col1_l, col1_r = st.columns(2)
@@ -79,7 +104,7 @@ with col1_l:
 with col1_r:
     h_r1 = st.number_input(f"น้ำ {away_name} (1)", value=2.05, step=0.01, format="%.2f", key="hr1")
 
-# แถวที่ 2
+# แถวที่ 2 (รอง 1 25%)
 st.markdown("🔹 **แถวที่ 2 (ราคารอง 1 - น้ำหนัก 25%)**")
 h_rate2 = st.selectbox("เรตแต้มต่อ แถว 2", HDP_OPTIONS, index=4, key="h_rate2")
 col2_l, col2_r = st.columns(2)
@@ -88,7 +113,7 @@ with col2_l:
 with col2_r:
     h_r2 = st.number_input(f"น้ำ {away_name} (2)", value=1.75, step=0.01, format="%.2f", key="hr2")
 
-# แถวที่ 3
+# แถวที่ 3 (รอง 2 25%)
 st.markdown("🔹 **แถวที่ 3 (ราคารอง 2 - น้ำหนัก 25%)**")
 h_rate3 = st.selectbox("เรตแต้มต่อ แถว 3", HDP_OPTIONS, index=2, key="h_rate3")
 col3_l, col3_r = st.columns(2)
@@ -99,19 +124,8 @@ with col3_r:
 
 st.markdown("---")
 
-# --- ส่วนที่ 3: ตัวเสริมความแม่นยำ (กดเลือกได้เลย ง่าย ๆ ไม่ต้องพิมพ์) ---
-st.subheader("⚡ 3. ปัจจัยเสริมหน้างาน (เลือกตามที่เห็น)")
-form_status = st.radio(
-    "ฟอร์มล่าสุดและการเล่น:",
-    ["ปกติ / สูสีกัน", f"🔥 {home_name} ฟอร์มเหนือกว่าชัดเจน", f"🔥 {away_name} ฟอร์มเหนือกว่าชัดเจน"],
-    horizontal=True
-)
-tier_gap = st.checkbox("🏆 ทีมต่อเกรดบอล/ชั้นลีก เหนือกว่าชัดเจน (เช่น บอลถ้วย หรือหัวตารางเจอท้ายตาราง)")
-
-st.markdown("---")
-
-# --- คำนวณผลลัพธ์ ---
-if st.button("🚀 สรุปผลวิเคราะห์ความได้เปรียบ", use_container_width=True):
+# --- ประมวลผลและตัดเกรด ---
+if st.button("🚀 สรุปผลวิเคราะห์ระดับลึก", use_container_width=True):
     rates = [h_rate1, h_rate2, h_rate3]
     odds_l = [h_l1, h_l2, h_l3]
     odds_r = [h_r1, h_r2, h_r3]
@@ -128,7 +142,6 @@ if st.button("🚀 สรุปผลวิเคราะห์ความไ�
         fair_l = (prob_l / (prob_l + prob_r)) * 100
         fair_r = (prob_r / (prob_l + prob_r)) * 100
         
-        # จับแรงเทค่าน้ำ
         b_l = 3.5 if l <= 1.78 else 0.0
         b_r = 3.5 if r <= 1.78 else 0.0
         
@@ -151,46 +164,54 @@ if st.button("🚀 สรุปผลวิเคราะห์ความไ�
             "diff": abs(norm_l - norm_r)
         })
 
-    # บวกคะแนนปัจจัยเสริม
-    if home_name in form_status:
-        total_l += 3.0
-    elif away_name in form_status:
-        total_r += 3.0
+    # ปรับค่าน้ำหนักตามบริบทการแข่งขัน (Context Weighting)
+    context_bias = 0.0
+    trap_warning = False
 
-    if tier_gap:
-        if fav_side == f"{home_name} ต่อ":
-            total_l += 4.0
-        elif fav_side == f"{away_name} ต่อ":
-            total_r += 4.0
+    # กรณีระดับชั้นต่างกัน
+    if "ต่างชั้นกันชัดเจน" in tier_level:
+        if "บอลถ้วยในประเทศ" in match_type:
+            # บอลถ้วยในประเทศ ทีมใหญ่เจอนอกลีก มักส่งสำรอง โต๊ะชอบเปิดราคาต่อล่อ
+            trap_warning = True
+        else:
+            context_bias += 4.5  # บอลลีก/ยุโรป ต่างชั้นจริง ทีมต่อได้เปรียบสูง
+    elif "ทีมต่อเกรดดีกว่าปานกลาง" in tier_level:
+        context_bias += 2.0
 
-    # สรุปทีมชนะราคา
+    # คำนวณฝั่งต่อรับแต้มสนับสนุน
+    if fav_side == f"{home_name} ต่อ":
+        total_l += context_bias
+    elif fav_side == f"{away_name} ต่อ":
+        total_r += context_bias
+
     winner_team = home_name if total_l > total_r else away_name
     total_diff = abs(total_l - total_r)
-
-    # เช็คว่าทั้ง 3 แถวไปทางเดียวกันหมดไหม
     all_same_side = (advantage_sides.count(winner_team) == 3)
 
-    # ฟันธงข้อความ ต่อ หรือ รอง
+    # กำหนดสถานะคำแนะนำ
     if "ต่อ" in fav_side:
         action = f"ต่อ [{winner_team}]" if winner_team in fav_side else f"รอง [{winner_team}]"
     else:
         action = f"วาง [{winner_team}]"
 
-    # ตัดเกรด
-    if all_same_side and (tier_gap or total_diff >= 6.0):
-        grade = "🟢 เกรด A+ (มั่นใจสูงสุด น้ำเอกฉันท์ + บอลเข้าทาง)"
+    # ระบบคัดเกรดอัจฉริยะ
+    if trap_warning and ("ต่อ" in action):
+        grade = "🟡 เกรด B- (ระวังราคาโต๊ะล่อ: บอลถ้วยในประเทศมักพักตัวหลัก ทีมใหญ่อาจยิงไม่ขาด)"
+        status_color = "#d29922"
+    elif all_same_side and ("ต่างชั้นกันชัดเจน" in tier_level or total_diff >= 6.5):
+        grade = "🟢 เกรด A+ (มั่นใจสูงสุด: น้ำเอกฉันท์ทั้ง 3 แถว + เกรดบอลหนุนชัดเจน)"
         status_color = "#238636"
     elif all_same_side or total_diff >= 4.0:
-        grade = "🔵 เกรด A (สัญญาณชัด น่าลงทุน)"
+        grade = "🔵 เกรด A (สัญญาณได้เปรียบค่อนข้างชัด น่าลงทุนเดี่ยว)"
         status_color = "#1f6feb"
     elif total_diff >= 2.5:
-        grade = "🟡 เกรด B (เล่นได้เฉพาะเต็งเดี่ยว)"
+        grade = "🟡 เกรด B (ความได้เปรียบปานกลาง เล่นคุมเงินรัดกุม)"
         status_color = "#d29922"
     else:
-        grade = "🔴 เกรด C (ราคาก้ำกึ่ง ไม่แนะนำ)"
+        grade = "🔴 เกรด C (ราคาก้ำกึ่งหรือน้ำขัดแย้ง ไม่แนะนำ)"
         status_color = "#f85149"
 
-    # กล่องแสดงผลลัพธ์
+    # แสดงผล
     st.subheader("🎯 ชี้เป้าฝั่งที่ได้เปรียบ")
     st.markdown(f"""
         <div style="background-color: #161b22; border-left: 6px solid {status_color}; padding: 16px; border-radius: 8px; margin-bottom: 15px;">
@@ -201,10 +222,10 @@ if st.button("🚀 สรุปผลวิเคราะห์ความไ�
 
     st.markdown(f"📌 **เรตที่แนะนำ:** ยึดราคาหลักแถว 1 **({h_rate1})**")
 
-    if all_same_side:
-        st.caption("✅ น้ำไหลไปในทิศทางเดียวกันหมดทั้ง 3 แถว ความเสี่ยงต่ำ")
-    else:
-        st.caption("⚠️ ระวัง: มีราคาแถวรองบางเรตเริ่มสวนทาง ควรคุมเงินให้ดี")
+    if trap_warning:
+        st.warning("⚠️ **แจ้งเตือนความเสี่ยง:** เป็นศึกบอลถ้วยในประเทศที่มีความต่างชั้น ระวังทีมต่อส่งสำรองลงเล่นและยิงเฉือนแค่เม็ดเดียว")
+    elif all_same_side:
+        st.caption("✅ ค่าน้ำทั้ง 3 แถวไหลไปในทิศทางเดียวกันทั้งหมด สอดคล้องกับสภาพชั้นบอล เหมาะสำหรับคัดเน้น")
 
     st.markdown("---")
     st.subheader("📊 เจาะลึกรายแถวราคา")
