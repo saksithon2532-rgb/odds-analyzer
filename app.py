@@ -1,10 +1,101 @@
 import streamlit as st
 
-# กำหนดค่าหน้าเว็บ
-st.set_page_config(page_title="เครื่องมือวิเคราะห์แฮนดิแคป", page_icon="⚽", layout="wide")
+# 1. ตั้งค่าหน้าเว็บ
+st.set_page_config(
+    page_title="เครื่องมือวิเคราะห์แฮนดิแคป",
+    page_icon="⚽",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# 2. ปรับแต่ง Dark Mode CSS แบบครบทุกจุด
+st.markdown("""
+    <style>
+    /* พื้นหลังหลักและฟอนต์สีสว่าง */
+    .stApp {
+        background-color: #0d1117 !important;
+        color: #c9d1d9 !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    /* หัวข้อและข้อความทั่วไป */
+    h1, h2, h3, h4, h5, h6, p, span, label {
+        color: #f0f6fc !important;
+    }
+    
+    /* ช่องกรอกข้อมูล (Text Input & Number Input) */
+    input[type="text"], input[type="number"] {
+        background-color: #161b22 !important;
+        color: #58a6ff !important;
+        border: 1px solid #30363d !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+    }
+    input:focus {
+        border-color: #58a6ff !important;
+        box-shadow: 0 0 0 1px #58a6ff !important;
+    }
+
+    /* ปุ่มเพิ่ม/ลดตัวเลขของ number_input */
+    button[data-testid="stNumberInputStepDown"], 
+    button[data-testid="stNumberInputStepUp"] {
+        background-color: #21262d !important;
+        color: #c9d1d9 !important;
+        border-color: #30363d !important;
+    }
+
+    /* กล่อง Selectbox / Dropdown */
+    div[data-baseweb="select"] > div {
+        background-color: #161b22 !important;
+        color: #f0f6fc !important;
+        border: 1px solid #30363d !important;
+        border-radius: 8px !important;
+    }
+    div[data-baseweb="popover"] ul {
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+    }
+    div[data-baseweb="popover"] li {
+        color: #f0f6fc !important;
+    }
+    div[data-baseweb="popover"] li:hover {
+        background-color: #21262d !important;
+    }
+
+    /* เส้นคั่น Divider */
+    hr {
+        border-color: #21262d !important;
+    }
+
+    /* กล่อง Container ข้อมูลสรุป */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 12px !important;
+    }
+
+    /* ปุ่มกดวิเคราะห์ (Primary Button) */
+    div.stButton > button {
+        background: linear-gradient(135deg, #238636 0%, #2ea043 100%) !important;
+        color: #ffffff !important;
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        border: 1px solid rgba(240, 246, 252, 0.1) !important;
+        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    div.stButton > button:hover {
+        background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%) !important;
+        box-shadow: 0 4px 16px rgba(46, 160, 67, 0.4) !important;
+        transform: translateY(-1px);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("⚽ เครื่องมือวิเคราะห์บอล: แฮนดิแคป 3 แถว")
-st.caption("ระบบคำนวณค่าน้ำ ป้องกันกับดักราคา และประเมินเกรดความน่าลงทุน")
+st.caption("ระบบคำนวณค่าน้ำ ป้องกันกับดักราคา และประเมินเกรดความน่าลงทุน (Dark Mode Edition)")
 
 # ฟังก์ชันแปลงค่าแต้มต่อเป็นตัวเลข
 def parse_hdp_val(rate_str):
@@ -52,7 +143,7 @@ st.divider()
 st.subheader("🔢 2. ค่าน้ำและเรตราคา 3 แถว (เลือกฝั่งต่อแยกแถวได้)")
 
 # แถวที่ 1
-st.markdown("• **แถวที่ 1 (น้ำหนัก 50% - ราคาเปิดหลัก)**")
+st.markdown("🔹 **แถวที่ 1 (น้ำหนัก 50% - ราคาเปิดหลัก)**")
 col_f1, col_r1 = st.columns(2)
 with col_f1:
     side1 = st.selectbox("ฝั่งต่อ แถว 1", side_options, index=0, key="side1")
@@ -66,7 +157,7 @@ with col_o1_2:
     o1_2 = st.number_input(f"น้ำ {team2_name} (1)", min_value=1.0, max_value=5.0, value=1.99, step=0.01, key="o1_2")
 
 # แถวที่ 2
-st.markdown("• **แถวที่ 2 (น้ำหนัก 25%)**")
+st.markdown("🔹 **แถวที่ 2 (น้ำหนัก 25%)**")
 col_f2, col_r2 = st.columns(2)
 with col_f2:
     side2 = st.selectbox("ฝั่งต่อ แถว 2", side_options, index=0, key="side2")
@@ -80,7 +171,7 @@ with col_o2_2:
     o2_2 = st.number_input(f"น้ำ {team2_name} (2)", min_value=1.0, max_value=5.0, value=1.74, step=0.01, key="o2_2")
 
 # แถวที่ 3
-st.markdown("• **แถวที่ 3 (น้ำหนัก 25%)**")
+st.markdown("🔹 **แถวที่ 3 (น้ำหนัก 25%)**")
 col_f3, col_r3 = st.columns(2)
 with col_f3:
     side3 = st.selectbox("ฝั่งต่อ แถว 3", side_options, index=0, key="side3")
@@ -137,7 +228,6 @@ if st.button("🚀 สรุปผลวิเคราะห์ระดับ�
         p1_val = row_details[i]["p1"]
         p2_val = row_details[i]["p2"]
         
-        # ถ้าราคาแถวนี้ต่อลึกกว่าแถวหลัก และเป็นฝั่งต่อ ชดเชยไม่ให้ฉุดคะแนน
         if hdp_numeric[i] > hdp_numeric[0] and "ต่อ" in sides[i]:
             if sides[i] == f"{team1_name} ต่อ" and p1_val < 50.0:
                 p1_val = 50.0
@@ -167,7 +257,7 @@ if st.button("🚀 สรุปผลวิเคราะห์ระดับ�
                 has_severe_conflict = True
                 break
 
-    # ประเมินเกรดความมั่นใจ (ปรับเกณฑ์ให้เหมาะสมกับตลาดจริง)
+    # ประเมินเกรดความมั่นใจ
     if has_severe_conflict:
         grade = "เกรด C- (อันตรายสูงสุด: ราคาแตกแถวรุนแรง โต๊ะวางกับดัก)"
         grade_color = "red"
@@ -194,7 +284,7 @@ if st.button("🚀 สรุปผลวิเคราะห์ระดับ�
         advice = f"พิจารณา [{winner_team}] หรือเน้นบอลสด"
         analysis_note = "ℹ️ ค่าน้ำสองฝั่งค่อนข้างสมดุล"
 
-    # แสดงผล
+    # แสดงผลลัพธ์
     st.subheader("🎯 ชี้เป้าฝั่งที่ได้เปรียบ")
     with st.container(border=True):
         st.markdown(f"### 👉 แนะนำ: **{advice}**")
